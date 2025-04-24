@@ -1,4 +1,13 @@
 (() => {
+  // Script has already been initialized check
+  if (window.bskyTrustedUsersInitialized) {
+    console.log("Trusted Users script already initialized");
+    return;
+  }
+
+  // Mark script as initialized
+  window.bskyTrustedUsersInitialized = true;
+
   // Define a storage key for trusted users
   const TRUSTED_USERS_STORAGE_KEY = "bsky_trusted_users";
 
@@ -46,8 +55,6 @@
       `Checking if any trusted users have verified ${currentProfileDid}`,
     );
 
-    let isVerifiedByTrustedUser = false;
-
     // Use Promise.all to fetch all verification data in parallel
     const verificationPromises = trustedUsers.map(async (trustedUser) => {
       try {
@@ -66,7 +73,6 @@
 
               // Add to verifiers list
               profileVerifiers.push(trustedUser);
-              isVerifiedByTrustedUser = true;
             }
           }
         }
@@ -214,10 +220,20 @@
     });
   };
 
-  // Create settings button and modal
+  // Create settings UI - only once
+  let settingsButton = null;
+  let settingsModal = null;
+
+  // Function to create the settings UI if it doesn't exist yet
   const createSettingsUI = () => {
+    // Check if UI already exists
+    if (document.getElementById("bsky-trusted-settings-button")) {
+      return;
+    }
+
     // Create settings button
-    const settingsButton = document.createElement("button");
+    settingsButton = document.createElement("button");
+    settingsButton.id = "bsky-trusted-settings-button";
     settingsButton.textContent = "Trusted Users Settings";
     settingsButton.style.cssText = `
       position: fixed;
@@ -234,8 +250,9 @@
     `;
 
     // Create modal container
-    const modal = document.createElement("div");
-    modal.style.cssText = `
+    settingsModal = document.createElement("div");
+    settingsModal.id = "bsky-trusted-settings-modal";
+    settingsModal.style.cssText = `
       display: none;
       position: fixed;
       top: 0;
@@ -299,11 +316,11 @@
     modalContent.appendChild(form);
     modalContent.appendChild(trustedUsersList);
     modalContent.appendChild(closeButton);
-    modal.appendChild(modalContent);
+    settingsModal.appendChild(modalContent);
 
     // Add elements to the document
     document.body.appendChild(settingsButton);
-    document.body.appendChild(modal);
+    document.body.appendChild(settingsModal);
 
     // Function to update the list of trusted users in the UI
     const updateTrustedUsersList = () => {
@@ -346,12 +363,12 @@
 
     // Event listeners
     settingsButton.addEventListener("click", () => {
-      modal.style.display = "flex";
+      settingsModal.style.display = "flex";
       updateTrustedUsersList();
     });
 
     closeButton.addEventListener("click", () => {
-      modal.style.display = "none";
+      settingsModal.style.display = "none";
     });
 
     document
@@ -367,66 +384,100 @@
       });
 
     // Close modal when clicking outside
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        modal.style.display = "none";
+    settingsModal.addEventListener("click", (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.style.display = "none";
       }
     });
   };
 
-  const currentUrl = window.location.href;
-  if (currentUrl.includes("bsky.app/profile/")) {
-    const handle = currentUrl.split("/profile/")[1].split("/")[0];
-    console.log("Extracted handle:", handle);
+  // Function to check the current profile
+  const checkCurrentProfile = () => {
+    const currentUrl = window.location.href;
+    if (currentUrl.includes("bsky.app/profile/")) {
+      const handle = currentUrl.split("/profile/")[1].split("/")[0];
+      console.log("Extracted handle:", handle);
 
-    // Create and add the settings UI
-    createSettingsUI();
+      // Create and add the settings UI (only once)
+      createSettingsUI();
 
-    // Fetch user profile data
-    fetch(
-      `https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=${handle}&collection=app.bsky.actor.profile&rkey=self`,
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("User profile data:", data);
+      // Fetch user profile data
+      fetch(
+        `https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=${handle}&collection=app.bsky.actor.profile&rkey=self`,
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("User profile data:", data);
 
-        // Extract the DID from the profile data
-        const did = data.uri.split("/")[2];
-        console.log("User DID:", did);
+          // Extract the DID from the profile data
+          const did = data.uri.split("/")[2];
+          console.log("User DID:", did);
 
-        // Now fetch the app.bsky.graph.verification data specifically
-        fetch(
-          `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${handle}&collection=app.bsky.graph.verification`,
-        )
-          .then((response) => response.json())
-          .then((verificationData) => {
-            console.log("Verification data:", verificationData);
-            if (
-              verificationData.records &&
-              verificationData.records.length > 0
-            ) {
-              console.log(
-                "User has app.bsky.graph.verification:",
-                verificationData.records,
+          // Now fetch the app.bsky.graph.verification data specifically
+          fetch(
+            `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${handle}&collection=app.bsky.graph.verification`,
+          )
+            .then((response) => response.json())
+            .then((verificationData) => {
+              console.log("Verification data:", verificationData);
+              if (
+                verificationData.records &&
+                verificationData.records.length > 0
+              ) {
+                console.log(
+                  "User has app.bsky.graph.verification:",
+                  verificationData.records,
+                );
+              } else {
+                console.log("User does not have app.bsky.graph.verification");
+              }
+
+              // Check if any trusted users have verified this profile using the DID
+              checkTrustedUserVerifications(did);
+            })
+            .catch((verificationError) => {
+              console.error(
+                "Error fetching verification data:",
+                verificationError,
               );
-            } else {
-              console.log("User does not have app.bsky.graph.verification");
-            }
+            });
+        })
+        .catch((error) => {
+          console.error("Error checking profile:", error);
+        });
 
-            // Check if any trusted users have verified this profile using the DID
-            checkTrustedUserVerifications(did);
-          })
-          .catch((verificationError) => {
-            console.error(
-              "Error fetching verification data:",
-              verificationError,
-            );
-          });
-      })
-      .catch((error) => {
-        console.error("Error checking profile:", error);
-      });
+      console.log("Bluesky profile detected");
+    }
+  };
 
-    console.log("Example domain detected");
-  }
+  // Initial check
+  checkCurrentProfile();
+
+  // Set up a MutationObserver to watch for URL changes
+  const observeUrlChanges = () => {
+    let lastUrl = location.href;
+
+    const observer = new MutationObserver(() => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        console.log("URL changed to:", location.href);
+
+        // Remove any existing badges when URL changes
+        const existingBadge = document.getElementById(
+          "user-trusted-verification-badge",
+        );
+        if (existingBadge) {
+          existingBadge.remove();
+        }
+
+        // Check if we're on a profile page now
+        checkCurrentProfile();
+      }
+    });
+
+    observer.observe(document, { subtree: true, childList: true });
+  };
+
+  // Start observing for URL changes
+  observeUrlChanges();
 })();
