@@ -68,6 +68,16 @@
     return cacheEntry && Date.now() - cacheEntry.timestamp < CACHE_EXPIRY_TIME;
   };
 
+  // Function to remove a specific user from the verification cache
+  const removeUserFromCache = (handle) => {
+    const cache = getVerificationCache();
+    if (cache[handle]) {
+      delete cache[handle];
+      saveVerificationCache(cache);
+      console.log(`Removed ${handle} from verification cache`);
+    }
+  };
+
   const clearCache = () => {
     localStorage.removeItem(VERIFICATION_CACHE_STORAGE_KEY);
     console.log("Verification cache cleared");
@@ -174,7 +184,7 @@
 
     // If we have verifiers, display the badge
     if (profileVerifiers.length > 0) {
-      await displayVerificationBadge(profileVerifiers);
+      displayVerificationBadge(profileVerifiers);
       return true;
     }
 
@@ -290,37 +300,13 @@
     });
   };
 
-  const findProfileHeaderWithRetry = (retryCount = 0, maxRetries = 10) => {
+  // Function to display verification badge on the profile
+  const displayVerificationBadge = (verifierHandles) => {
+    // Find the profile header or name element to add the badge to
     const nameElements = document.querySelectorAll(
       '[data-testid="profileHeaderDisplayName"]',
     );
     const nameElement = nameElements[nameElements.length - 1];
-
-    if (nameElement) {
-      console.log("Profile header found");
-      return nameElement;
-    }
-    if (retryCount < maxRetries) {
-      // Retry with exponential backoff
-      const delay = Math.min(100 * 1.5 ** retryCount, 2000);
-      console.log(
-        `Profile header not found, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`,
-      );
-
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(findProfileHeaderWithRetry(retryCount + 1, maxRetries));
-        }, delay);
-      });
-    }
-    console.log("Failed to find profile header after maximum retries");
-    return null;
-  };
-
-  // Function to display verification badge on the profile
-  const displayVerificationBadge = async (verifierHandles) => {
-    // Find the profile header or name element to add the badge to
-    const nameElement = await findProfileHeaderWithRetry();
 
     console.log(nameElement);
 
@@ -481,6 +467,7 @@
       btn.addEventListener("click", (e) => {
         const handle = e.target.getAttribute("data-handle");
         removeTrustedUser(handle);
+        removeUserFromCache(handle);
         updateTrustedUsersList();
       });
     }
