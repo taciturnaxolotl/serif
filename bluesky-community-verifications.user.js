@@ -174,7 +174,7 @@
 
     // If we have verifiers, display the badge
     if (profileVerifiers.length > 0) {
-      displayVerificationBadge(profileVerifiers);
+      await displayVerificationBadge(profileVerifiers);
       return true;
     }
 
@@ -290,55 +290,82 @@
     });
   };
 
-  // Legacy function kept for compatibility but redirects to the new implementation
-  const addRecheckButton = () => {
-    createPillButtons();
+  const findProfileHeaderWithRetry = (retryCount = 0, maxRetries = 10) => {
+    const nameElements = document.querySelectorAll(
+      '[data-testid="profileHeaderDisplayName"]',
+    );
+    const nameElement = nameElements[nameElements.length - 1];
+
+    if (nameElement) {
+      console.log("Profile header found");
+      return nameElement;
+    }
+    if (retryCount < maxRetries) {
+      // Retry with exponential backoff
+      const delay = Math.min(100 * 1.5 ** retryCount, 2000);
+      console.log(
+        `Profile header not found, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`,
+      );
+
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(findProfileHeaderWithRetry(retryCount + 1, maxRetries));
+        }, delay);
+      });
+    }
+    console.log("Failed to find profile header after maximum retries");
+    return null;
   };
 
   // Function to display verification badge on the profile
-  const displayVerificationBadge = (verifierHandles) => {
+  const displayVerificationBadge = async (verifierHandles) => {
     // Find the profile header or name element to add the badge to
-    const nameElement = document.querySelector(
-      '[data-testid="profileHeaderDisplayName"]',
-    );
+    const nameElement = await findProfileHeaderWithRetry();
+
+    console.log(nameElement);
 
     if (nameElement) {
-      // Check if badge already exists
-      if (!document.getElementById("user-trusted-verification-badge")) {
-        const badge = document.createElement("span");
-        badge.id = "user-trusted-verification-badge";
-        badge.innerHTML = "✓";
-
-        // Create tooltip text with all verifiers
-        const verifiersText =
-          verifierHandles.length > 1
-            ? `Verified by: ${verifierHandles.join(", ")}`
-            : `Verified by ${verifierHandles[0]}`;
-
-        badge.title = verifiersText;
-        badge.style.cssText = `
-          background-color: #0070ff;
-          color: white;
-          border-radius: 50%;
-          width: 18px;
-          height: 18px;
-          margin-left: 8px;
-          font-size: 12px;
-          font-weight: bold;
-          cursor: help;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        `;
-
-        // Add a click event to show all verifiers
-        badge.addEventListener("click", (e) => {
-          e.stopPropagation();
-          showVerifiersPopup(verifierHandles);
-        });
-
-        nameElement.appendChild(badge);
+      // Remove existing badge if present
+      const existingBadge = document.getElementById(
+        "user-trusted-verification-badge",
+      );
+      if (existingBadge) {
+        existingBadge.remove();
       }
+
+      const badge = document.createElement("span");
+      badge.id = "user-trusted-verification-badge";
+      badge.innerHTML = "✓";
+
+      // Create tooltip text with all verifiers
+      const verifiersText =
+        verifierHandles.length > 1
+          ? `Verified by: ${verifierHandles.join(", ")}`
+          : `Verified by ${verifierHandles[0]}`;
+
+      badge.title = verifiersText;
+      badge.style.cssText = `
+        background-color: #0070ff;
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        margin-left: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: help;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      `;
+
+      // Add a click event to show all verifiers
+      badge.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showVerifiersPopup(verifierHandles);
+      });
+
+      nameElement.appendChild(badge);
     }
 
     // Also add pill buttons when verification is found
@@ -605,9 +632,14 @@
   // Function to check the current profile
   const checkCurrentProfile = () => {
     const currentUrl = window.location.href;
-    if (currentUrl.includes("bsky.app/profile/")) {
+    // Only trigger on profile pages
+    if (
+      currentUrl.match(/bsky\.app\/profile\/[^\/]+$/) ||
+      currentUrl.match(/bsky\.app\/profile\/[^\/]+\/follows/) ||
+      currentUrl.match(/bsky\.app\/profile\/[^\/]+\/followers/)
+    ) {
       const handle = currentUrl.split("/profile/")[1].split("/")[0];
-      console.log("Extracted handle:", handle);
+      console.log("Detected profile page for:", handle);
 
       // Create and add the settings UI (only once)
       createSettingsUI();
@@ -624,40 +656,33 @@
           const did = data.uri.split("/")[2];
           console.log("User DID:", did);
 
-          // Now fetch the app.bsky.graph.verification data specifically
-          fetch(
-            `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${handle}&collection=app.bsky.graph.verification`,
-          )
-            .then((response) => response.json())
-            .then((verificationData) => {
-              console.log("Verification data:", verificationData);
-              if (
-                verificationData.records &&
-                verificationData.records.length > 0
-              ) {
-                console.log(
-                  "User has app.bsky.graph.verification:",
-                  verificationData.records,
-                );
-              } else {
-                console.log("User does not have app.bsky.graph.verification");
-              }
-
-              // Check if any trusted users have verified this profile using the DID
-              checkTrustedUserVerifications(did);
-            })
-            .catch((verificationError) => {
-              console.error(
-                "Error fetching verification data:",
-                verificationError,
-              );
-            });
+          // Check if any trusted users have verified this profile using the DID
+          checkTrustedUserVerifications(did);
         })
         .catch((error) => {
           console.error("Error checking profile:", error);
         });
 
       console.log("Bluesky profile detected");
+    } else {
+      // Not on a profile page, reset state
+      currentProfileDid = null;
+      profileVerifiers = [];
+
+      // Remove UI elements if present
+      const existingBadge = document.getElementById(
+        "user-trusted-verification-badge",
+      );
+      if (existingBadge) {
+        existingBadge.remove();
+      }
+
+      const existingPill = document.getElementById(
+        "trusted-users-pill-container",
+      );
+      if (existingPill) {
+        existingPill.remove();
+      }
     }
   };
 
@@ -670,10 +695,15 @@
 
     const observer = new MutationObserver(() => {
       if (location.href !== lastUrl) {
+        const oldUrl = lastUrl;
         lastUrl = location.href;
-        console.log("URL changed to:", location.href);
+        console.log("URL changed from:", oldUrl, "to:", location.href);
 
-        // Remove any existing badges when URL changes
+        // Reset current profile DID
+        currentProfileDid = null;
+        profileVerifiers = [];
+
+        // Clean up UI elements
         const existingBadge = document.getElementById(
           "user-trusted-verification-badge",
         );
@@ -681,7 +711,6 @@
           existingBadge.remove();
         }
 
-        // Remove the pill container when URL changes
         const existingPill = document.getElementById(
           "trusted-users-pill-container",
         );
@@ -690,7 +719,7 @@
         }
 
         // Check if we're on a profile page now
-        checkCurrentProfile();
+        setTimeout(checkCurrentProfile, 500); // Small delay to ensure DOM has updated
       }
     });
 
