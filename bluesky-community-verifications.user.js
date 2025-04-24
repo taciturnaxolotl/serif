@@ -48,13 +48,15 @@
 
     let isVerifiedByTrustedUser = false;
 
-    for (const trustedUser of trustedUsers) {
+    // Use Promise.all to fetch all verification data in parallel
+    const verificationPromises = trustedUsers.map(async (trustedUser) => {
       try {
         const response = await fetch(
           `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${trustedUser}&collection=app.bsky.graph.verification`,
         );
         const data = await response.json();
 
+        // Check if this trusted user has verified the current profile
         if (data.records && data.records.length > 0) {
           for (const record of data.records) {
             if (record.value && record.value.subject === currentProfileDid) {
@@ -68,13 +70,23 @@
             }
           }
         }
+        return { trustedUser, success: true };
       } catch (error) {
         console.error(
           `Error checking verifications from ${trustedUser}:`,
           error,
         );
+        return { trustedUser, success: false, error };
       }
-    }
+    });
+
+    // Wait for all verification checks to complete
+    const results = await Promise.all(verificationPromises);
+
+    // Log summary of API calls
+    console.log(`API calls completed: ${results.length}`);
+    console.log(`Successful calls: ${results.filter((r) => r.success).length}`);
+    console.log(`Failed calls: ${results.filter((r) => !r.success).length}`);
 
     // If we have verifiers, display the badge
     if (profileVerifiers.length > 0) {
