@@ -1,3 +1,14 @@
+// ==UserScript==
+// @name         Bluesky Community Verifications
+// @namespace    https://tangled.sh/@dunkirk.sh/bunplayground
+// @version      0.1
+// @description  Shows verification badges from trusted community members on Bluesky
+// @author       Kieran Klukas
+// @match        https://bsky.app/*
+// @grant        none
+// @run-at       document-end
+// ==/UserScript==
+
 (() => {
   // Script has already been initialized check
   if (window.bskyTrustedUsersInitialized) {
