@@ -23,6 +23,50 @@
   const TRUSTED_USERS_STORAGE_KEY = "bsky_trusted_users";
   const VERIFICATION_CACHE_STORAGE_KEY = "bsky_verification_cache";
   const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+  const BADGE_TYPE_STORAGE_KEY = "bsky_verification_badge_type";
+  const BADGE_COLOR_STORAGE_KEY = "bsky_verification_badge_color";
+
+  // Default badge configuration
+  const DEFAULT_BADGE_TYPE = "checkmark";
+  const DEFAULT_BADGE_COLOR = "#0070ff";
+
+  // Functions to get/set badge configuration
+  const getBadgeType = () => {
+    return localStorage.getItem(BADGE_TYPE_STORAGE_KEY) || DEFAULT_BADGE_TYPE;
+  };
+
+  const getBadgeColor = () => {
+    return localStorage.getItem(BADGE_COLOR_STORAGE_KEY) || DEFAULT_BADGE_COLOR;
+  };
+
+  const saveBadgeType = (type) => {
+    localStorage.setItem(BADGE_TYPE_STORAGE_KEY, type);
+  };
+
+  const saveBadgeColor = (color) => {
+    localStorage.setItem(BADGE_COLOR_STORAGE_KEY, color);
+  };
+
+  const getBadgeContent = (type) => {
+    switch (type) {
+      case "checkmark":
+        return "✓";
+      case "star":
+        return "★";
+      case "heart":
+        return "♥";
+      case "shield":
+        return "🛡️";
+      case "lock":
+        return "🔒";
+      case "verified":
+        return `<svg viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="white" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+                </svg>`;
+      default:
+        return "✓";
+    }
+  };
 
   // Function to get trusted users from local storage
   const getTrustedUsers = () => {
@@ -225,7 +269,13 @@
 
       const badge = document.createElement("span");
       badge.id = "user-trusted-verification-badge";
-      badge.innerHTML = "✓";
+
+      // Get user badge preferences
+      const badgeType = getBadgeType();
+      const badgeColor = getBadgeColor();
+
+      // Set badge content based on type
+      badge.innerHTML = getBadgeContent(badgeType);
 
       // Create tooltip text with all verifiers
       const verifiersText =
@@ -235,7 +285,7 @@
 
       badge.title = verifiersText;
       badge.style.cssText = `
-        background-color: #0070ff;
+        background-color: ${badgeColor};
         color: white;
         border-radius: 50%;
         width: 18px;
@@ -717,6 +767,127 @@
     const modalHeader = document.createElement("div");
     modalHeader.innerHTML = `<h2 style="margin-top: 0;">Trusted Bluesky Users</h2>`;
 
+    const badgeCustomization = document.createElement("div");
+    badgeCustomization.style.cssText = `
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    `;
+
+    badgeCustomization.innerHTML = `
+      <h3 style="margin-top: 0; color: white;">Badge Customization</h3>
+
+      <div style="margin-bottom: 15px;">
+        <p style="margin-bottom: 8px; color: white;">Badge Type:</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="radio" name="badgeType" value="checkmark" ${getBadgeType() === "checkmark" ? "checked" : ""}>
+            <span style="margin-left: 5px;">Checkmark (✓)</span>
+          </label>
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="radio" name="badgeType" value="star" ${getBadgeType() === "star" ? "checked" : ""}>
+            <span style="margin-left: 5px;">Star (★)</span>
+          </label>
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="radio" name="badgeType" value="heart" ${getBadgeType() === "heart" ? "checked" : ""}>
+            <span style="margin-left: 5px;">Heart (♥)</span>
+          </label>
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="radio" name="badgeType" value="shield" ${getBadgeType() === "shield" ? "checked" : ""}>
+            <span style="margin-left: 5px;">Shield (🛡️)</span>
+          </label>
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="radio" name="badgeType" value="lock" ${getBadgeType() === "lock" ? "checked" : ""}>
+            <span style="margin-left: 5px;">Lock (🔒)</span>
+          </label>
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="radio" name="badgeType" value="verified" ${getBadgeType() === "verified" ? "checked" : ""}>
+            <span style="margin-left: 5px;">Verified</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <p style="margin-bottom: 8px; color: white;">Badge Color:</p>
+        <div style="display: flex; align-items: center;">
+          <input type="color" id="badgeColorPicker" value="${getBadgeColor()}" style="margin-right: 10px;">
+          <span id="badgeColorPreview" style="display: inline-block; width: 24px; height: 24px; background-color: ${getBadgeColor()}; border-radius: 50%; margin-right: 10px;"></span>
+          <button id="resetBadgeColor" style="padding: 5px 10px; background: #473A3A; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset to Default</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <p style="color: white;">Preview:</p>
+        <div style="display: flex; align-items: center; margin-top: 8px;">
+          <span style="color: white; font-weight: bold;">User Name</span>
+          <span id="badgePreview" style="
+            background-color: ${getBadgeColor()};
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            margin-left: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          ">${getBadgeContent(getBadgeType())}</span>
+        </div>
+      </div>
+    `;
+
+    // Add the badge customization section to the modal content
+    modalContent.appendChild(badgeCustomization);
+
+    // Add event listeners for the badge customization controls
+    setTimeout(() => {
+      // Badge type selection
+      const badgeTypeRadios = document.querySelectorAll(
+        'input[name="badgeType"]',
+      );
+      for (const radio of badgeTypeRadios) {
+        radio.addEventListener("change", (e) => {
+          const selectedType = e.target.value;
+          saveBadgeType(selectedType);
+          updateBadgePreview();
+        });
+      }
+
+      // Badge color picker
+      const colorPicker = document.getElementById("badgeColorPicker");
+      const colorPreview = document.getElementById("badgeColorPreview");
+
+      colorPicker.addEventListener("input", (e) => {
+        const selectedColor = e.target.value;
+        colorPreview.style.backgroundColor = selectedColor;
+        saveBadgeColor(selectedColor);
+        updateBadgePreview();
+      });
+
+      // Reset color button
+      const resetColorBtn = document.getElementById("resetBadgeColor");
+      resetColorBtn.addEventListener("click", () => {
+        colorPicker.value = DEFAULT_BADGE_COLOR;
+        colorPreview.style.backgroundColor = DEFAULT_BADGE_COLOR;
+        saveBadgeColor(DEFAULT_BADGE_COLOR);
+        updateBadgePreview();
+      });
+
+      // Function to update the badge preview
+      function updateBadgePreview() {
+        const badgePreview = document.getElementById("badgePreview");
+        const selectedType = getBadgeType();
+        const selectedColor = getBadgeColor();
+
+        badgePreview.innerHTML = getBadgeContent(selectedType);
+        badgePreview.style.backgroundColor = selectedColor;
+      }
+
+      // Initialize preview
+      updateBadgePreview();
+    }, 100);
+
     // Create input form
     const form = document.createElement("div");
     form.innerHTML = `
@@ -1012,7 +1183,12 @@
               // Create a badge element
               const smallBadge = document.createElement("span");
               smallBadge.className = "trusted-user-inline-badge";
-              smallBadge.innerHTML = "✓";
+
+              // Get user badge preferences
+              const badgeType = getBadgeType();
+              const badgeColor = getBadgeColor();
+
+              smallBadge.innerHTML = getBadgeContent(badgeType);
 
               // Create tooltip text with all verifiers
               const verifiersText =
@@ -1022,7 +1198,7 @@
 
               smallBadge.title = verifiersText;
               smallBadge.style.cssText = `
-                background-color: #0070ff;
+                background-color: ${badgeColor};
                 color: white;
                 border-radius: 50%;
                 width: 14px;
