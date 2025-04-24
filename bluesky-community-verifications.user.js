@@ -712,6 +712,88 @@
     }
   };
 
+  const addSettingsButton = () => {
+    // Check if we're on the settings page
+    if (!window.location.href.includes("bsky.app/settings")) {
+      return;
+    }
+
+    // Check if our button already exists to avoid duplicates
+    if (document.getElementById("community-verifications-settings-button")) {
+      return;
+    }
+
+    // Find the right place to insert our button (after content-and-media link)
+    const contentMediaLink = document.querySelector(
+      'a[href="/settings/content-and-media"]',
+    );
+    if (!contentMediaLink) {
+      console.log("Could not find content-and-media link to insert after");
+      return;
+    }
+
+    // Clone the existing link and modify it
+    const verificationButton = contentMediaLink.cloneNode(true);
+    verificationButton.id = "community-verifications-settings-button";
+    verificationButton.href = "#"; // No actual link, we'll handle click with JS
+    verificationButton.setAttribute("aria-label", "Community Verifications");
+
+    const highlightColor =
+      verificationButton.firstChild.style.backgroundColor || "rgb(30,41,54)";
+
+    // Add hover effect to highlight the button
+    verificationButton.addEventListener("mouseover", () => {
+      verificationButton.firstChild.style.backgroundColor = highlightColor;
+    });
+
+    verificationButton.addEventListener("mouseout", () => {
+      verificationButton.firstChild.style.backgroundColor = null;
+    });
+
+    // Update the text content
+    const textDiv = verificationButton.querySelector(".css-146c3p1");
+    if (textDiv) {
+      textDiv.textContent = "Community Verifications";
+    }
+
+    // Update the icon
+    const iconDiv = verificationButton.querySelector(
+      ".css-175oi2r[style*='width: 28px']",
+    );
+    if (iconDiv) {
+      iconDiv.innerHTML = `
+        <svg fill="none" width="28" viewBox="0 0 24 24" height="28" style="color: rgb(241, 243, 245);">
+          <path fill="hsl(211, 20%, 95.3%)" d="M21.2,9.3c-0.5-0.5-1.1-0.7-1.8-0.7h-2.3V6.3c0-2.1-1.7-3.7-3.7-3.7h-3c-2.1,0-3.7,1.7-3.7,3.7v2.3H4.6
+          c-0.7,0-1.3,0.3-1.8,0.7c-0.5,0.5-0.7,1.1-0.7,1.8v9.3c0,0.7,0.3,1.3,0.7,1.8c0.5,0.5,1.1,0.7,1.8,0.7h14.9c0.7,0,1.3-0.3,1.8-0.7
+          c0.5-0.5,0.7-1.1,0.7-1.8v-9.3C22,10.4,21.7,9.8,21.2,9.3z M14.1,15.6l-1.3,1.3c-0.1,0.1-0.3,0.2-0.5,0.2c-0.2,0-0.3-0.1-0.5-0.2l-3.3-3.3
+          c-0.1-0.1-0.2-0.3-0.2-0.5c0-0.2,0.1-0.3,0.2-0.5l1.3-1.3c0.1-0.1,0.3-0.2,0.5-0.2c0.2,0,0.3,0.1,0.5,0.2l1.5,1.5l4.2-4.2
+          c0.1-0.1,0.3-0.2,0.5-0.2c0.2,0,0.3,0.1,0.5,0.2l1.3,1.3c0.1,0.1,0.2,0.3,0.2,0.5c0,0.2-0.1,0.3-0.2,0.5L14.1,15.6z M9.7,6.3
+          c0-0.9,0.7-1.7,1.7-1.7h3c0.9,0,1.7,0.7,1.7,1.7v2.3H9.7V6.3z"/>
+        </svg>
+      `;
+    }
+
+    // Insert our button after the content-and-media link
+    const parentElement = contentMediaLink.parentElement;
+    parentElement.insertBefore(
+      verificationButton,
+      contentMediaLink.nextSibling,
+    );
+
+    // Add click event to open our settings modal
+    verificationButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (settingsModal) {
+        settingsModal.style.display = "flex";
+        updateTrustedUsersList();
+      } else {
+        createSettingsModal();
+      }
+    });
+
+    console.log("Added Community Verifications button to settings page");
+  };
+
   // Function to create the settings modal
   const createSettingsModal = () => {
     // Create modal container
@@ -1151,9 +1233,25 @@
     setInterval(debouncedCheck, 5000);
   };
 
-  // Add these calls to the initialization section
-  // Initial check for user links
-  setTimeout(checkUserLinksOnPage, 1000); // Slight delay to ensure page has loaded
+  // Wait for DOM to be fully loaded before initializing
+  document.addEventListener("DOMContentLoaded", () => {
+    // Initial check for user links
+    checkUserLinksOnPage();
+
+    // Add settings button if we're on the settings page
+    if (window.location.href.includes("bsky.app/settings")) {
+      // Wait for the content-and-media link to appear before adding our button
+      const waitForSettingsLink = setInterval(() => {
+        const contentMediaLink = document.querySelector(
+          'a[href="/settings/content-and-media"]',
+        );
+        if (contentMediaLink) {
+          clearInterval(waitForSettingsLink);
+          addSettingsButton();
+        }
+      }, 200);
+    }
+  });
 
   // Start observing for content changes to detect newly loaded posts
   observeContentChanges();
@@ -1189,6 +1287,11 @@
 
         // Check if we're on a profile page now
         setTimeout(checkCurrentProfile, 500); // Small delay to ensure DOM has updated
+
+        if (window.location.href.includes("bsky.app/settings")) {
+          // Give the page a moment to fully load
+          setTimeout(addSettingsButton, 500);
+        }
       }
     });
 
