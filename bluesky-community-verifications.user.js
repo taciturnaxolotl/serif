@@ -201,114 +201,7 @@
 
     console.log(`${profileDid} is not verified by any trusted users`);
 
-    // Add recheck button even when no verifications are found
-    createPillButtons();
-
     return false;
-  };
-
-  // Function to create a pill with recheck and settings buttons
-  const createPillButtons = () => {
-    // Remove existing buttons if any
-    const existingPill = document.getElementById(
-      "trusted-users-pill-container",
-    );
-    if (existingPill) {
-      existingPill.remove();
-    }
-
-    // Create pill container
-    const pillContainer = document.createElement("div");
-    pillContainer.id = "trusted-users-pill-container";
-    pillContainer.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 10000;
-      display: flex;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    `;
-
-    // Create recheck button (left half of pill)
-    const recheckButton = document.createElement("button");
-    recheckButton.id = "trusted-users-recheck-button";
-    recheckButton.innerHTML = "↻ Recheck";
-    recheckButton.style.cssText = `
-      padding: 10px 15px;
-      background-color: #2D578D;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      border-top-left-radius: 20px;
-      border-bottom-left-radius: 20px;
-    `;
-
-    // Add click event to recheck
-    recheckButton.addEventListener("click", async () => {
-      if (currentProfileDid) {
-        // Remove any existing badges when rechecking
-        const existingBadge = document.getElementById(
-          "user-trusted-verification-badge",
-        );
-        if (existingBadge) {
-          existingBadge.remove();
-        }
-
-        // Show loading state
-        recheckButton.innerHTML = "⟳ Checking...";
-        recheckButton.disabled = true;
-
-        // Recheck verifications
-        await checkTrustedUserVerifications(currentProfileDid);
-
-        // Reset button
-        recheckButton.innerHTML = "↻ Recheck";
-        recheckButton.disabled = false;
-      }
-    });
-
-    // Create vertical divider
-    const divider = document.createElement("div");
-    divider.style.cssText = `
-      width: 1px;
-      background-color: rgba(255, 255, 255, 0.3);
-    `;
-
-    // Create settings button (right half of pill)
-    const settingsButton = document.createElement("button");
-    settingsButton.id = "bsky-trusted-settings-button";
-    settingsButton.textContent = "Settings";
-    settingsButton.style.cssText = `
-      padding: 10px 15px;
-      background-color: #2D578D;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      border-top-right-radius: 20px;
-      border-bottom-right-radius: 20px;
-    `;
-
-    // Add elements to pill
-    pillContainer.appendChild(recheckButton);
-    pillContainer.appendChild(divider);
-    pillContainer.appendChild(settingsButton);
-
-    // Add pill to page
-    document.body.appendChild(pillContainer);
-
-    // Add event listener to settings button
-    settingsButton.addEventListener("click", () => {
-      if (settingsModal) {
-        settingsModal.style.display = "flex";
-        updateTrustedUsersList();
-      } else {
-        createSettingsModal();
-      }
-    });
   };
 
   // Function to display verification badge on the profile
@@ -364,9 +257,6 @@
 
       nameElement.appendChild(badge);
     }
-
-    // Also add pill buttons when verification is found
-    createPillButtons();
   };
 
   // Function to show a popup with all verifiers
@@ -983,17 +873,6 @@
     updateTrustedUsersList();
   };
 
-  // Function to create the settings UI if it doesn't exist yet
-  const createSettingsUI = () => {
-    // Create pill with buttons
-    createPillButtons();
-
-    // Create the settings modal if it doesn't exist yet
-    if (!settingsModal) {
-      createSettingsModal();
-    }
-  };
-
   // Function to check the current profile
   const checkCurrentProfile = () => {
     const currentUrl = window.location.href;
@@ -1005,9 +884,6 @@
     ) {
       const handle = currentUrl.split("/profile/")[1].split("/")[0];
       console.log("Detected profile page for:", handle);
-
-      // Create and add the settings UI (only once)
-      createSettingsUI();
 
       // Fetch user profile data
       fetch(
@@ -1040,13 +916,6 @@
       );
       if (existingBadge) {
         existingBadge.remove();
-      }
-
-      const existingPill = document.getElementById(
-        "trusted-users-pill-container",
-      );
-      if (existingPill) {
-        existingPill.remove();
       }
     }
   };
@@ -1278,19 +1147,12 @@
           existingBadge.remove();
         }
 
-        const existingPill = document.getElementById(
-          "trusted-users-pill-container",
-        );
-        if (existingPill) {
-          existingPill.remove();
-        }
-
         // Check if we're on a profile page now
         setTimeout(checkCurrentProfile, 500); // Small delay to ensure DOM has updated
 
         if (window.location.href.includes("bsky.app/settings")) {
           // Give the page a moment to fully load
-          setTimeout(addSettingsButton, 500);
+          setTimeout(addSettingsButton, 200);
         }
       }
     });
