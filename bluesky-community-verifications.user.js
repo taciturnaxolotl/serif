@@ -60,14 +60,44 @@
     // Use Promise.all to fetch all verification data in parallel
     const verificationPromises = trustedUsers.map(async (trustedUser) => {
       try {
-        const response = await fetch(
-          `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${trustedUser}&collection=app.bsky.graph.verification`,
-        );
-        const data = await response.json();
+        // Helper function to fetch all verification records with pagination
+        const fetchAllVerifications = async (user) => {
+          let allRecords = [];
+          let cursor = null;
+          let hasMore = true;
+
+          while (hasMore) {
+            const url = cursor
+              ? `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification&cursor=${cursor}`
+              : `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.records && data.records.length > 0) {
+              allRecords = [...allRecords, ...data.records];
+            }
+
+            if (data.cursor) {
+              cursor = data.cursor;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          return allRecords;
+        };
+
+        // Fetch all verification records for this trusted user
+        const records = await fetchAllVerifications(trustedUser);
+
+        console.log(`Received verification data from ${trustedUser}`, {
+          records,
+        });
 
         // Check if this trusted user has verified the current profile
-        if (data.records && data.records.length > 0) {
-          for (const record of data.records) {
+        if (records.length > 0) {
+          for (const record of records) {
             if (record.value && record.value.subject === profileDid) {
               console.log(
                 `${profileDid} is verified by trusted user ${trustedUser}`,
@@ -75,6 +105,7 @@
 
               // Add to verifiers list
               profileVerifiers.push(trustedUser);
+              break; // Once we find a verification, we can stop checking
             }
           }
         }
