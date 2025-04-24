@@ -79,6 +79,18 @@
     localStorage.setItem(TRUSTED_USERS_STORAGE_KEY, JSON.stringify(users));
   };
 
+  // Populate default trusted users if not already set
+  if (!localStorage.getItem(TRUSTED_USERS_STORAGE_KEY)) {
+    const defaultTrustedUsers = [
+      "bsky.app",
+      "nytimes.com",
+      "wired.com",
+      "theathletic.bsky.social",
+    ];
+    saveTrustedUsers(defaultTrustedUsers);
+    console.log("Added default trusted users:", defaultTrustedUsers);
+  }
+
   // Function to add a trusted user
   const addTrustedUser = (handle) => {
     const users = getTrustedUsers();
@@ -276,6 +288,11 @@
 
       // Set badge content based on type
       badge.innerHTML = getBadgeContent(badgeType);
+
+      // check if there is a div with button underneath
+      // Check if this user is verified by Bluesky
+      const isBlueskyVerified = nameElement.querySelector("div button");
+      if (isBlueskyVerified) isBlueskyVerified.remove();
 
       // Create tooltip text with all verifiers
       const verifiersText =
@@ -1219,6 +1236,17 @@
               parent.firstChild.after(smallBadge);
               parent.style.flexDirection = "row";
               parent.style.alignItems = "center";
+
+              // Look for verification SVG icon in the parent and remove it if it exists
+              const badgeSvgIcon = Array.from(parent.childNodes).find(
+                (node) =>
+                  node.nodeType === Node.ELEMENT_NODE &&
+                  node.tagName === "DIV" &&
+                  node.querySelector("svg"),
+              );
+              if (badgeSvgIcon) {
+                badgeSvgIcon.remove();
+              }
             }
           } catch (error) {
             console.error(`Error checking verification for ${handle}:`, error);
@@ -1281,7 +1309,7 @@
     checkUserLinksOnPage();
 
     // Initial check
-    setInterval(checkCurrentProfile, 2000);
+    setTimeout(checkCurrentProfile, 2000);
 
     // Add settings button if we're on the settings page
     if (window.location.href.includes("bsky.app/settings")) {
