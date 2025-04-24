@@ -8,8 +8,10 @@
   // Mark script as initialized
   window.bskyTrustedUsersInitialized = true;
 
-  // Define a storage key for trusted users
+  // Define storage keys
   const TRUSTED_USERS_STORAGE_KEY = "bsky_trusted_users";
+  const VERIFICATION_CACHE_STORAGE_KEY = "bsky_verification_cache";
+  const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
   // Function to get trusted users from local storage
   const getTrustedUsers = () => {
@@ -38,6 +40,39 @@
     saveTrustedUsers(updatedUsers);
   };
 
+  // Cache functions
+  const getVerificationCache = () => {
+    const cache = localStorage.getItem(VERIFICATION_CACHE_STORAGE_KEY);
+    return cache ? JSON.parse(cache) : {};
+  };
+
+  const saveVerificationCache = (cache) => {
+    localStorage.setItem(VERIFICATION_CACHE_STORAGE_KEY, JSON.stringify(cache));
+  };
+
+  const getCachedVerifications = (user) => {
+    const cache = getVerificationCache();
+    return cache[user] || null;
+  };
+
+  const cacheVerifications = (user, records) => {
+    const cache = getVerificationCache();
+    cache[user] = {
+      records,
+      timestamp: Date.now(),
+    };
+    saveVerificationCache(cache);
+  };
+
+  const isCacheValid = (cacheEntry) => {
+    return cacheEntry && Date.now() - cacheEntry.timestamp < CACHE_EXPIRY_TIME;
+  };
+
+  const clearCache = () => {
+    localStorage.removeItem(VERIFICATION_CACHE_STORAGE_KEY);
+    console.log("Verification cache cleared");
+  };
+
   // Store all verifiers for a profile
   let profileVerifiers = [];
 
@@ -62,6 +97,14 @@
       try {
         // Helper function to fetch all verification records with pagination
         const fetchAllVerifications = async (user) => {
+          // Check cache first
+          const cachedData = getCachedVerifications(user);
+          if (cachedData && isCacheValid(cachedData)) {
+            console.log(`Using cached verification data for ${user}`);
+            return cachedData.records;
+          }
+
+          console.log(`Fetching fresh verification data for ${user}`);
           let allRecords = [];
           let cursor = null;
           let hasMore = true;
@@ -85,6 +128,8 @@
             }
           }
 
+          // Save to cache
+          cacheVerifications(user, allRecords);
           return allRecords;
         };
 
@@ -466,6 +511,34 @@
       padding-top: 15px;
     `;
 
+    // Create cache control buttons
+    const cacheControls = document.createElement("div");
+    cacheControls.style.cssText = `
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    `;
+
+    const clearCacheButton = document.createElement("button");
+    clearCacheButton.textContent = "Clear Verification Cache";
+    clearCacheButton.style.cssText = `
+      padding: 8px 15px;
+      background-color: #735A5A;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    `;
+    clearCacheButton.addEventListener("click", () => {
+      clearCache();
+      alert(
+        "Verification cache cleared. Fresh data will be fetched on next check.",
+      );
+    });
+
+    cacheControls.appendChild(clearCacheButton);
+
     // Create close button
     const closeButton = document.createElement("button");
     closeButton.textContent = "Close";
@@ -482,6 +555,7 @@
     modalContent.appendChild(modalHeader);
     modalContent.appendChild(form);
     modalContent.appendChild(trustedUsersList);
+    modalContent.appendChild(cacheControls);
     modalContent.appendChild(closeButton);
     settingsModal.appendChild(modalContent);
 
