@@ -757,7 +757,7 @@
     settingsModal = document.createElement("div");
     settingsModal.id = "bsky-trusted-settings-modal";
     settingsModal.style.cssText = `
-      display: none;
+      display: flex;
       position: fixed;
       top: 0;
       left: 0;
