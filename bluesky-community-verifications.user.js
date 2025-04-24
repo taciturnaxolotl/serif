@@ -121,8 +121,8 @@
 
           while (hasMore) {
             const url = cursor
-              ? `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification&cursor=${cursor}`
-              : `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification`;
+              ? `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification&cursor=${cursor}`
+              : `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -472,6 +472,123 @@
       });
     }
   };
+
+  const searchUsers = async (searchQuery) => {
+    if (!searchQuery || searchQuery.length < 2) return [];
+
+    try {
+      const response = await fetch(
+        `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors?term=${encodeURIComponent(searchQuery)}&limit=5`,
+      );
+      const data = await response.json();
+      return data.actors || [];
+    } catch (error) {
+      console.error("Error searching for users:", error);
+      return [];
+    }
+  };
+
+  // Function to create and show the autocomplete dropdown
+  const showAutocompleteResults = (results, inputElement) => {
+    // Remove existing dropdown if any
+    const existingDropdown = document.getElementById("autocomplete-dropdown");
+    if (existingDropdown) existingDropdown.remove();
+
+    if (results.length === 0) return;
+
+    // Create dropdown
+    const dropdown = document.createElement("div");
+    dropdown.id = "autocomplete-dropdown";
+    dropdown.style.cssText = `
+      position: absolute;
+      background-color: #2A2E3D;
+      border: 1px solid #444;
+      border-radius: 4px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      max-height: 300px;
+      overflow-y: auto;
+      width: ${inputElement.offsetWidth}px;
+      z-index: 10002;
+      margin-top: 2px;
+    `;
+
+    // Position dropdown below input
+    const inputRect = inputElement.getBoundingClientRect();
+    dropdown.style.left = `${inputRect.left}px`;
+    dropdown.style.top = `${inputRect.bottom}px`;
+
+    // Add results to dropdown
+    for (const user of results) {
+      const userItem = document.createElement("div");
+      userItem.className = "autocomplete-item";
+      userItem.style.cssText = `
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        cursor: pointer;
+        color: white;
+        border-bottom: 1px solid #444;
+      `;
+      userItem.onmouseover = () => {
+        userItem.style.backgroundColor = "#3A3F55";
+      };
+      userItem.onmouseout = () => {
+        userItem.style.backgroundColor = "";
+      };
+
+      // Add profile picture
+      const avatar = document.createElement("img");
+      avatar.src = user.avatar || "https://bsky.app/static/default-avatar.png";
+      avatar.style.cssText = `
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin-right: 10px;
+        object-fit: cover;
+      `;
+
+      // Add user info
+      const userInfo = document.createElement("div");
+      userInfo.style.cssText = `
+        display: flex;
+        flex-direction: column;
+      `;
+
+      const displayName = document.createElement("div");
+      displayName.textContent = user.displayName || user.handle;
+      displayName.style.fontWeight = "bold";
+
+      const handle = document.createElement("div");
+      handle.textContent = user.handle;
+      handle.style.fontSize = "0.8em";
+      handle.style.opacity = "0.8";
+
+      userInfo.appendChild(displayName);
+      userInfo.appendChild(handle);
+
+      userItem.appendChild(avatar);
+      userItem.appendChild(userInfo);
+
+      // Handle click on user item
+      userItem.addEventListener("click", () => {
+        inputElement.value = user.handle;
+        dropdown.remove();
+      });
+
+      dropdown.appendChild(userItem);
+    }
+
+    document.body.appendChild(dropdown);
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function closeDropdown(e) {
+      if (e.target !== inputElement && !dropdown.contains(e.target)) {
+        dropdown.remove();
+        document.removeEventListener("click", closeDropdown);
+      }
+    });
+  };
+
   // Function to create the settings modal
   const createSettingsModal = () => {
     // Create modal container
@@ -508,12 +625,12 @@
     // Create input form
     const form = document.createElement("div");
     form.innerHTML = `
-      <p>Add Bluesky handles you trust:</p>
-      <div style="display: flex; margin-bottom: 15px;">
-        <input id="trustedUserInput" type="text" placeholder="username.bsky.social" style="flex: 1; padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
-        <button id="addTrustedUserBtn" style="background-color: #2D578D; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer;">Add</button>
-      </div>
-    `;
+        <p>Add Bluesky handles you trust:</p>
+        <div style="display: flex; margin-bottom: 15px; position: relative;">
+          <input id="trustedUserInput" type="text" placeholder="Search for a user..." style="flex: 1; padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
+          <button id="addTrustedUserBtn" style="background-color: #2D578D; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer;">Add</button>
+        </div>
+      `;
 
     // Create trusted users list
     const trustedUsersList = document.createElement("div");
@@ -575,6 +692,24 @@
     // Add to document
     document.body.appendChild(settingsModal);
 
+    const userInput = document.getElementById("trustedUserInput");
+
+    // Add input event for autocomplete
+    let debounceTimeout;
+    userInput.addEventListener("input", (e) => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(async () => {
+        const searchQuery = e.target.value.trim();
+        if (searchQuery.length >= 2) {
+          const results = await searchUsers(searchQuery);
+          showAutocompleteResults(results, userInput);
+        } else {
+          const dropdown = document.getElementById("autocomplete-dropdown");
+          if (dropdown) dropdown.remove();
+        }
+      }, 300); // Debounce for 300ms
+    });
+
     // Event listeners
     closeButton.addEventListener("click", () => {
       settingsModal.style.display = "none";
@@ -588,6 +723,10 @@
         addTrustedUser(handle);
         input.value = "";
         updateTrustedUsersList();
+
+        // Remove dropdown if present
+        const dropdown = document.getElementById("autocomplete-dropdown");
+        if (dropdown) dropdown.remove();
       }
     };
 
@@ -597,14 +736,12 @@
       .addEventListener("click", addUserFromInput);
 
     // Add keydown event to input for Enter key
-    document
-      .getElementById("trustedUserInput")
-      .addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addUserFromInput();
-        }
-      });
+    userInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addUserFromInput();
+      }
+    });
 
     // Close modal when clicking outside
     settingsModal.addEventListener("click", (e) => {
@@ -645,7 +782,7 @@
 
       // Fetch user profile data
       fetch(
-        `https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=${handle}&collection=app.bsky.actor.profile&rkey=self`,
+        `https://public.api.bsky.app/xrpc/com.atproto.repo.getRecord?repo=${handle}&collection=app.bsky.actor.profile&rkey=self`,
       )
         .then((response) => response.json())
         .then((data) => {
