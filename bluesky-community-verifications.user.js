@@ -121,8 +121,8 @@
 
           while (hasMore) {
             const url = cursor
-              ? `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification&cursor=${cursor}`
-              : `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification`;
+              ? `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification&cursor=${cursor}`
+              : `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${user}&collection=app.bsky.graph.verification`;
 
             const response = await fetch(url);
             const data = await response.json();
