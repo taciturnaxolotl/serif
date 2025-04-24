@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bluesky Community Verifications
 // @namespace    https://tangled.sh/@dunkirk.sh/bunplayground
-// @version      0.1
+// @version      0.2
 // @description  Shows verification badges from trusted community members on Bluesky
 // @author       Kieran Klukas
 // @match        https://bsky.app/*
