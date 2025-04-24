@@ -41,8 +41,12 @@
   // Store all verifiers for a profile
   let profileVerifiers = [];
 
+  // Store current profile DID
+  let currentProfileDid = null;
+
   // Function to check if a trusted user has verified the current profile
-  const checkTrustedUserVerifications = async (currentProfileDid) => {
+  const checkTrustedUserVerifications = async (profileDid) => {
+    currentProfileDid = profileDid; // Store for recheck functionality
     const trustedUsers = getTrustedUsers();
     profileVerifiers = []; // Reset the verifiers list
 
@@ -51,9 +55,7 @@
       return false;
     }
 
-    console.log(
-      `Checking if any trusted users have verified ${currentProfileDid}`,
-    );
+    console.log(`Checking if any trusted users have verified ${profileDid}`);
 
     // Use Promise.all to fetch all verification data in parallel
     const verificationPromises = trustedUsers.map(async (trustedUser) => {
@@ -66,9 +68,9 @@
         // Check if this trusted user has verified the current profile
         if (data.records && data.records.length > 0) {
           for (const record of data.records) {
-            if (record.value && record.value.subject === currentProfileDid) {
+            if (record.value && record.value.subject === profileDid) {
               console.log(
-                `${currentProfileDid} is verified by trusted user ${trustedUser}`,
+                `${profileDid} is verified by trusted user ${trustedUser}`,
               );
 
               // Add to verifiers list
@@ -100,8 +102,121 @@
       return true;
     }
 
-    console.log(`${currentProfileDid} is not verified by any trusted users`);
+    console.log(`${profileDid} is not verified by any trusted users`);
+
+    // Add recheck button even when no verifications are found
+    createPillButtons();
+
     return false;
+  };
+
+  // Function to create a pill with recheck and settings buttons
+  const createPillButtons = () => {
+    // Remove existing buttons if any
+    const existingPill = document.getElementById(
+      "trusted-users-pill-container",
+    );
+    if (existingPill) {
+      existingPill.remove();
+    }
+
+    // Create pill container
+    const pillContainer = document.createElement("div");
+    pillContainer.id = "trusted-users-pill-container";
+    pillContainer.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    `;
+
+    // Create recheck button (left half of pill)
+    const recheckButton = document.createElement("button");
+    recheckButton.id = "trusted-users-recheck-button";
+    recheckButton.innerHTML = "↻ Recheck";
+    recheckButton.style.cssText = `
+      padding: 10px 15px;
+      background-color: #2D578D;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+    `;
+
+    // Add click event to recheck
+    recheckButton.addEventListener("click", async () => {
+      if (currentProfileDid) {
+        // Remove any existing badges when rechecking
+        const existingBadge = document.getElementById(
+          "user-trusted-verification-badge",
+        );
+        if (existingBadge) {
+          existingBadge.remove();
+        }
+
+        // Show loading state
+        recheckButton.innerHTML = "⟳ Checking...";
+        recheckButton.disabled = true;
+
+        // Recheck verifications
+        await checkTrustedUserVerifications(currentProfileDid);
+
+        // Reset button
+        recheckButton.innerHTML = "↻ Recheck";
+        recheckButton.disabled = false;
+      }
+    });
+
+    // Create vertical divider
+    const divider = document.createElement("div");
+    divider.style.cssText = `
+      width: 1px;
+      background-color: rgba(255, 255, 255, 0.3);
+    `;
+
+    // Create settings button (right half of pill)
+    const settingsButton = document.createElement("button");
+    settingsButton.id = "bsky-trusted-settings-button";
+    settingsButton.textContent = "Settings";
+    settingsButton.style.cssText = `
+      padding: 10px 15px;
+      background-color: #2D578D;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      border-top-right-radius: 20px;
+      border-bottom-right-radius: 20px;
+    `;
+
+    // Add elements to pill
+    pillContainer.appendChild(recheckButton);
+    pillContainer.appendChild(divider);
+    pillContainer.appendChild(settingsButton);
+
+    // Add pill to page
+    document.body.appendChild(pillContainer);
+
+    // Add event listener to settings button
+    settingsButton.addEventListener("click", () => {
+      if (settingsModal) {
+        settingsModal.style.display = "flex";
+        updateTrustedUsersList();
+      } else {
+        createSettingsModal();
+      }
+    });
+  };
+
+  // Legacy function kept for compatibility but redirects to the new implementation
+  const addRecheckButton = () => {
+    createPillButtons();
   };
 
   // Function to display verification badge on the profile
@@ -149,6 +264,9 @@
         nameElement.appendChild(badge);
       }
     }
+
+    // Also add pill buttons when verification is found
+    createPillButtons();
   };
 
   // Function to show a popup with all verifiers
@@ -220,35 +338,53 @@
     });
   };
 
-  // Create settings UI - only once
-  let settingsButton = null;
+  // Create settings modal
   let settingsModal = null;
 
-  // Function to create the settings UI if it doesn't exist yet
-  const createSettingsUI = () => {
-    // Check if UI already exists
-    if (document.getElementById("bsky-trusted-settings-button")) {
+  // Function to update the list of trusted users in the UI
+  const updateTrustedUsersList = () => {
+    const trustedUsersList = document.getElementById("trustedUsersList");
+    if (!trustedUsersList) return;
+
+    const users = getTrustedUsers();
+    trustedUsersList.innerHTML = "";
+
+    if (users.length === 0) {
+      trustedUsersList.innerHTML = "<p>No trusted users added yet.</p>";
       return;
     }
 
-    // Create settings button
-    settingsButton = document.createElement("button");
-    settingsButton.id = "bsky-trusted-settings-button";
-    settingsButton.textContent = "Trusted Users Settings";
-    settingsButton.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 10000;
-      padding: 10px 15px;
-      background-color: #2D578D;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-    `;
+    for (const user of users) {
+      const userItem = document.createElement("div");
+      userItem.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+      `;
 
+      userItem.innerHTML = `
+        <span>${user}</span>
+        <button class="remove-user" data-handle="${user}" style="background-color: #CE3838; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">Remove</button>
+      `;
+
+      trustedUsersList.appendChild(userItem);
+    }
+
+    // Add event listeners to remove buttons
+    const removeButtons = document.querySelectorAll(".remove-user");
+    for (const btn of removeButtons) {
+      btn.addEventListener("click", (e) => {
+        const handle = e.target.getAttribute("data-handle");
+        removeTrustedUser(handle);
+        updateTrustedUsersList();
+      });
+    }
+  };
+
+  // Function to create the settings modal
+  const createSettingsModal = () => {
     // Create modal container
     settingsModal = document.createElement("div");
     settingsModal.id = "bsky-trusted-settings-modal";
@@ -318,59 +454,15 @@
     modalContent.appendChild(closeButton);
     settingsModal.appendChild(modalContent);
 
-    // Add elements to the document
-    document.body.appendChild(settingsButton);
+    // Add to document
     document.body.appendChild(settingsModal);
 
-    // Function to update the list of trusted users in the UI
-    const updateTrustedUsersList = () => {
-      const users = getTrustedUsers();
-      trustedUsersList.innerHTML = "";
-
-      if (users.length === 0) {
-        trustedUsersList.innerHTML = "<p>No trusted users added yet.</p>";
-        return;
-      }
-
-      for (const user of users) {
-        const userItem = document.createElement("div");
-        userItem.style.cssText = `
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 0;
-          border-bottom: 1px solid #eee;
-        `;
-
-        userItem.innerHTML = `
-          <span>${user}</span>
-          <button class="remove-user" data-handle="${user}" style="background-color: #CE3838; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">Remove</button>
-        `;
-
-        trustedUsersList.appendChild(userItem);
-      }
-
-      // Add event listeners to remove buttons
-      const removeButtons = document.querySelectorAll(".remove-user");
-      for (const btn of removeButtons) {
-        btn.addEventListener("click", (e) => {
-          const handle = e.target.getAttribute("data-handle");
-          removeTrustedUser(handle);
-          updateTrustedUsersList();
-        });
-      }
-    };
-
     // Event listeners
-    settingsButton.addEventListener("click", () => {
-      settingsModal.style.display = "flex";
-      updateTrustedUsersList();
-    });
-
     closeButton.addEventListener("click", () => {
       settingsModal.style.display = "none";
     });
 
+    // Add trusted user button event
     document
       .getElementById("addTrustedUserBtn")
       .addEventListener("click", () => {
@@ -389,6 +481,20 @@
         settingsModal.style.display = "none";
       }
     });
+
+    // Initialize the list
+    updateTrustedUsersList();
+  };
+
+  // Function to create the settings UI if it doesn't exist yet
+  const createSettingsUI = () => {
+    // Create pill with buttons
+    createPillButtons();
+
+    // Create the settings modal if it doesn't exist yet
+    if (!settingsModal) {
+      createSettingsModal();
+    }
   };
 
   // Function to check the current profile
@@ -468,6 +574,14 @@
         );
         if (existingBadge) {
           existingBadge.remove();
+        }
+
+        // Remove the pill container when URL changes
+        const existingPill = document.getElementById(
+          "trusted-users-pill-container",
+        );
+        if (existingPill) {
+          existingPill.remove();
         }
 
         // Check if we're on a profile page now
