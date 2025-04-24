@@ -825,6 +825,192 @@
   // Initial check
   checkCurrentProfile();
 
+  const checkUserLinksOnPage = async () => {
+    // Look for profile links with handles
+    // Find all profile links and filter to get only one link per parent
+    const allProfileLinks = Array.from(
+      document.querySelectorAll('a[href^="/profile/"]:not(:has(*))'),
+    );
+
+    // Use a Map to keep track of parent elements and their first child link
+    const parentMap = new Map();
+
+    // For each link, store only the first one found for each parent
+    for (const link of allProfileLinks) {
+      const parent = link.parentElement;
+      if (parent && !parentMap.has(parent)) {
+        parentMap.set(parent, link);
+      }
+    }
+
+    // Get only the first link for each parent
+    const profileLinks = Array.from(parentMap.values());
+
+    if (profileLinks.length === 0) return;
+
+    console.log(`Found ${profileLinks.length} possible user links on page`);
+
+    // Process profile links to identify user containers
+    for (const link of profileLinks) {
+      try {
+        // Check if we already processed this link
+        if (link.getAttribute("data-verification-checked") === "true") continue;
+
+        // Mark as checked
+        link.setAttribute("data-verification-checked", "true");
+
+        // Extract handle from href
+        const handle = link.getAttribute("href").split("/profile/")[1];
+        if (!handle) continue;
+
+        // check if there is anything after the handle
+        const handleTrailing = handle.split("/").length > 1;
+        if (handleTrailing) continue;
+
+        // Find parent container that might contain the handle and verification icon
+        // Look for containers where this link is followed by another link with the same handle
+        const parent = link.parentElement;
+
+        // If we found a container with the verification icon
+        if (parent) {
+          // Check if this user already has our verification badge
+          if (parent.querySelector(".trusted-user-inline-badge")) continue;
+
+          try {
+            // Fetch user profile data to get DID
+            const response = await fetch(
+              `https://public.api.bsky.app/xrpc/com.atproto.repo.getRecord?repo=${handle}&collection=app.bsky.actor.profile&rkey=self`,
+            );
+            const data = await response.json();
+
+            // Extract the DID from the profile data
+            const did = data.uri.split("/")[2];
+
+            // Check if this user is verified by our trusted users
+            const trustedUsers = getTrustedUsers();
+            let isVerified = false;
+            const verifiers = [];
+
+            // Check cache first for each trusted user
+            for (const trustedUser of trustedUsers) {
+              const cachedData = getCachedVerifications(trustedUser);
+
+              if (cachedData && isCacheValid(cachedData)) {
+                // Use cached verification data
+                const records = cachedData.records;
+
+                for (const record of records) {
+                  if (record.value && record.value.subject === did) {
+                    isVerified = true;
+                    verifiers.push(trustedUser);
+                    break;
+                  }
+                }
+              }
+            }
+
+            // If verified, add a small badge
+            if (isVerified && verifiers.length > 0) {
+              // Create a badge element
+              const smallBadge = document.createElement("span");
+              smallBadge.className = "trusted-user-inline-badge";
+              smallBadge.innerHTML = "✓";
+
+              // Create tooltip text with all verifiers
+              const verifiersText =
+                verifiers.length > 1
+                  ? `Verified by: ${verifiers.join(", ")}`
+                  : `Verified by ${verifiers[0]}`;
+
+              smallBadge.title = verifiersText;
+              smallBadge.style.cssText = `
+                background-color: #0070ff;
+                color: white;
+                border-radius: 50%;
+                width: 14px;
+                height: 14px;
+                font-size: 10px;
+                font-weight: bold;
+                cursor: help;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                margin-left: 4px;
+              `;
+
+              // Add click event to show verifiers
+              smallBadge.addEventListener("click", (e) => {
+                e.stopPropagation();
+                showVerifiersPopup(verifiers);
+              });
+
+              // Insert badge after the SVG element
+              parent.firstChild.after(smallBadge);
+              parent.style.flexDirection = "row";
+              parent.style.alignItems = "center";
+            }
+          } catch (error) {
+            console.error(`Error checking verification for ${handle}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error("Error processing profile link:", error);
+      }
+    }
+  };
+
+  const observeContentChanges = () => {
+    // Use a debounced function to check for new user links
+    const debouncedCheck = () => {
+      clearTimeout(window.userLinksCheckTimeout);
+      window.userLinksCheckTimeout = setTimeout(() => {
+        checkUserLinksOnPage();
+      }, 300);
+    };
+
+    // Create a mutation observer that watches for DOM changes
+    const observer = new MutationObserver((mutations) => {
+      let hasRelevantChanges = false;
+
+      // Check if any mutations involve adding new nodes
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Check if this element or its children might contain profile links
+              if (
+                node.querySelector('a[href^="/profile/"]') ||
+                (node.tagName === "A" &&
+                  node.getAttribute("href")?.startsWith("/profile/"))
+              ) {
+                hasRelevantChanges = true;
+                break;
+              }
+            }
+          }
+        }
+        if (hasRelevantChanges) break;
+      }
+
+      if (hasRelevantChanges) {
+        debouncedCheck();
+      }
+    });
+
+    // Observe the entire document for content changes that might include profile links
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Also check periodically for posts that might have been loaded but not caught by the observer
+    setInterval(debouncedCheck, 5000);
+  };
+
+  // Add these calls to the initialization section
+  // Initial check for user links
+  setTimeout(checkUserLinksOnPage, 1000); // Slight delay to ensure page has loaded
+
+  // Start observing for content changes to detect newly loaded posts
+  observeContentChanges();
+
   // Set up a MutationObserver to watch for URL changes
   const observeUrlChanges = () => {
     let lastUrl = location.href;
