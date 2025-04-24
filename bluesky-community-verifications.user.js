@@ -256,7 +256,7 @@
     );
     const nameElement = nameElements[nameElements.length - 1];
 
-    console.log(nameElement);
+    console.log("nameElement", nameElement);
 
     if (nameElement) {
       // Remove existing badge if present
@@ -288,10 +288,10 @@
         background-color: ${badgeColor};
         color: white;
         border-radius: 50%;
-        width: 18px;
-        height: 18px;
+        width: 22px;
+        height: 22px;
         margin-left: 8px;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: bold;
         cursor: help;
         display: inline-flex;
@@ -775,9 +775,9 @@
     `;
 
     badgeCustomization.innerHTML = `
-      <h3 style="margin-top: 0; color: white;">Badge Customization</h3>
+      <h2 style="margin-top: 0; color: white;">Badge Customization</h3>
 
-      <div style="margin-bottom: 15px;">
+      <div style="margin-bottom: 1rem;">
         <p style="margin-bottom: 8px; color: white;">Badge Type:</p>
         <div style="display: flex; flex-wrap: wrap; gap: 10px;">
           <label style="display: flex; align-items: center; cursor: pointer; color: white;">
@@ -816,7 +816,7 @@
         </div>
       </div>
 
-      <div style="margin-top: 20px;">
+      <div style="margin-top: 20px; margin-bottom: 1rem;">
         <p style="color: white;">Preview:</p>
         <div style="display: flex; align-items: center; margin-top: 8px;">
           <span style="color: white; font-weight: bold;">User Name</span>
@@ -824,10 +824,10 @@
             background-color: ${getBadgeColor()};
             color: white;
             border-radius: 50%;
-            width: 18px;
-            height: 18px;
+            width: 22px;
+            height: 22px;
             margin-left: 8px;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             display: inline-flex;
             align-items: center;
@@ -1091,9 +1091,6 @@
     }
   };
 
-  // Initial check
-  checkCurrentProfile();
-
   const checkUserLinksOnPage = async () => {
     // Look for profile links with handles
     // Find all profile links and filter to get only one link per parent
@@ -1282,6 +1279,9 @@
   document.addEventListener("DOMContentLoaded", () => {
     // Initial check for user links
     checkUserLinksOnPage();
+
+    // Initial check
+    setInterval(checkCurrentProfile, 2000);
 
     // Add settings button if we're on the settings page
     if (window.location.href.includes("bsky.app/settings")) {
