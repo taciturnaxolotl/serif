@@ -472,7 +472,6 @@
       });
     }
   };
-
   // Function to create the settings modal
   const createSettingsModal = () => {
     // Create modal container
@@ -581,16 +580,29 @@
       settingsModal.style.display = "none";
     });
 
+    // Function to add a user from the input field
+    const addUserFromInput = () => {
+      const input = document.getElementById("trustedUserInput");
+      const handle = input.value.trim();
+      if (handle) {
+        addTrustedUser(handle);
+        input.value = "";
+        updateTrustedUsersList();
+      }
+    };
+
     // Add trusted user button event
     document
       .getElementById("addTrustedUserBtn")
-      .addEventListener("click", () => {
-        const input = document.getElementById("trustedUserInput");
-        const handle = input.value.trim();
-        if (handle) {
-          addTrustedUser(handle);
-          input.value = "";
-          updateTrustedUsersList();
+      .addEventListener("click", addUserFromInput);
+
+    // Add keydown event to input for Enter key
+    document
+      .getElementById("trustedUserInput")
+      .addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addUserFromInput();
         }
       });
 
