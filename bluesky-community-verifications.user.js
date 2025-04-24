@@ -1198,9 +1198,9 @@
                 background-color: ${badgeColor};
                 color: white;
                 border-radius: 50%;
-                width: 14px;
-                height: 14px;
-                font-size: 10px;
+                width: 16px;
+                height: 16px;
+                font-size: 11px;
                 font-weight: bold;
                 cursor: help;
                 display: inline-flex;
