@@ -600,6 +600,118 @@
     });
   };
 
+  // Function to import verifications from the current user
+  const importVerificationsFromSelf = async () => {
+    try {
+      // Check if we can determine the current user
+      const bskyStorageData = localStorage.getItem("BSKY_STORAGE");
+      let userData = null;
+
+      if (bskyStorageData) {
+        try {
+          const bskyStorage = JSON.parse(bskyStorageData);
+          if (bskyStorage.session.currentAccount) {
+            userData = bskyStorage.session.currentAccount;
+          }
+        } catch (error) {
+          console.error("Error parsing BSKY_STORAGE data:", error);
+        }
+      }
+
+      if (!userData || !userData.handle) {
+        alert(
+          "Could not determine your Bluesky handle. Please ensure you're logged in.",
+        );
+        return;
+      }
+
+      if (!userData || !userData.handle) {
+        alert(
+          "Unable to determine your Bluesky handle. Make sure you're logged in.",
+        );
+        return;
+      }
+
+      const userHandle = userData.handle;
+
+      // Show loading state
+      const importButton = document.getElementById("importVerificationsBtn");
+      const originalText = importButton.textContent;
+      importButton.textContent = "Importing...";
+      importButton.disabled = true;
+
+      // Fetch verification records from the user's account with pagination
+      let allRecords = [];
+      let cursor = null;
+      let hasMore = true;
+
+      while (hasMore) {
+        const url = cursor
+          ? `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${userHandle}&collection=app.bsky.graph.verification&cursor=${cursor}`
+          : `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${userHandle}&collection=app.bsky.graph.verification`;
+
+        const verificationResponse = await fetch(url);
+        const data = await verificationResponse.json();
+
+        if (data.records && data.records.length > 0) {
+          allRecords = [...allRecords, ...data.records];
+        }
+
+        if (data.cursor) {
+          cursor = data.cursor;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const verificationData = { records: allRecords };
+
+      if (!verificationData.records || verificationData.records.length === 0) {
+        alert("No verification records found in your account.");
+        importButton.textContent = originalText;
+        importButton.disabled = false;
+        return;
+      }
+
+      // Extract the handles of verified users
+      const verifiedUsers = [];
+      for (const record of verificationData.records) {
+        console.log(record.value.handle);
+        verifiedUsers.push(record.value.handle);
+      }
+
+      // Add all found users to trusted users
+      let addedCount = 0;
+      for (const handle of verifiedUsers) {
+        const existingUsers = getTrustedUsers();
+        if (!existingUsers.includes(handle)) {
+          addTrustedUser(handle);
+          addedCount++;
+        }
+      }
+
+      // Update the UI
+      updateTrustedUsersList();
+
+      // Reset button state
+      importButton.textContent = originalText;
+      importButton.disabled = false;
+
+      // Show result
+      alert(
+        `Successfully imported ${addedCount} verified users from your account.`,
+      );
+    } catch (error) {
+      console.error("Error importing verifications:", error);
+      alert("Error importing verifications. Check console for details.");
+      const importButton = document.getElementById("importVerificationsBtn");
+      if (importButton) {
+        importButton.textContent = "Import Verifications";
+        importButton.disabled = false;
+      }
+    }
+  };
+
   // Function to create the settings modal
   const createSettingsModal = () => {
     // Create modal container
@@ -642,6 +754,29 @@
           <button id="addTrustedUserBtn" style="background-color: #2D578D; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer;">Add</button>
         </div>
       `;
+
+    // Create import button
+    const importContainer = document.createElement("div");
+    importContainer.style.cssText = `
+      margin-top: 10px;
+      margin-bottom: 15px;
+    `;
+
+    const importButton = document.createElement("button");
+    importButton.id = "importVerificationsBtn";
+    importButton.textContent = "Import Your Verifications";
+    importButton.style.cssText = `
+      background-color: #2D578D;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 15px;
+      cursor: pointer;
+      width: 100%;
+    `;
+
+    importButton.addEventListener("click", importVerificationsFromSelf);
+    importContainer.appendChild(importButton);
 
     // Create trusted users list
     const trustedUsersList = document.createElement("div");
@@ -695,6 +830,7 @@
     // Assemble modal
     modalContent.appendChild(modalHeader);
     modalContent.appendChild(form);
+    modalContent.appendChild(importContainer);
     modalContent.appendChild(trustedUsersList);
     modalContent.appendChild(cacheControls);
     modalContent.appendChild(closeButton);
