@@ -10,23 +10,22 @@
 
 ## 🏗️ Usage
 
-Add handles of Bluesky users you trust to your verification list. When viewing profiles that these trusted users have verified, you'll see a blue checkmark by their name showing community verification.
+By default we have `bsky.app`, `nytimes.com`, `wired.com`, and `theathletic.bsky.social` as trusted verifiers. You can add more by going to bluesky settings and clicking on "Community Verifications"
 
-Click the "Trusted Users Settings" button in the bottom right corner to manage your trusted users list:
+That will open a modal where you can add more trusted verifiers and modify how the verification badge looks.
 
-```
-1. Add trusted users with their full handle (username.bsky.social)
-2. View all profiles they've verified
-3. Remove users from your trusted list as needed
-```
-
-When you see a blue checkmark (✓) next to a profile name, click it to see which of your trusted users have verified that profile.
+![preview](https://raw.githubusercontent.com/taciturnaxolotl/serif/main/.github/images/preview.webp)
 
 ## 🔧 Installation
 
-1. Install a userscript manager like Tampermonkey or Greasemonkey
-2. Click the installation link or copy the script to your userscript manager
-3. Visit Bluesky and you'll see the "Trusted Users Settings" button
+1. Install a userscript manager for your browser:
+  - Chrome: [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
+  - Firefox: [Tampermonkey](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/)
+  - Safari: [Tampermonkey](https://apps.apple.com/app/tampermonkey/id1482490089)
+  - Edge: [Tampermonkey](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)
+  - Opera: [Tampermonkey](https://addons.opera.com/en/extensions/details/tampermonkey-beta/)
+
+2. Click [here](https://github.com/taciturnaxolotl/serif/raw/refs/heads/main/bluesky-community-verifications.user.js) to install the script.
 
 ## 📜 License
 
