@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <meta
+            name="description"
+            content="Serif.blue - Fancy projects by Kieran"
+        />
+        <title>Serif.blue</title>
+        <style>
+            :root {
+                --alice-blue: #d9f0ffff;
+                --light-sky-blue: #a3d5ffff;
+                --light-sky-blue-2: #83c9f4ff;
+                --medium-slate-blue: #6f73d2ff;
+                --glaucous: #7681b3ff;
+                --bsky-blue: #0085ff;
+            }
+
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: "Georgia", serif;
+                background-color: var(--alice-blue);
+                color: #333;
+                line-height: 1.6;
+                max-width: 1200px;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                flex: 1 0 auto;
+            }
+
+            header {
+                background-color: var(--medium-slate-blue);
+                color: white;
+                padding: 2rem 1rem;
+                text-align: center;
+                margin-bottom: 20px;
+                border-bottom: 1px solid var(--light-sky-blue);
+            }
+
+            header h1 {
+                margin: 0;
+                font-size: 2.5rem;
+                letter-spacing: 0.5px;
+            }
+
+            header p {
+                margin: 0.5rem 0 0;
+                font-style: italic;
+                opacity: 0.9;
+            }
+
+            main {
+                padding: 30px;
+                background-color: white;
+                border-radius: 5px;
+                margin-top: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            }
+
+            main h2 {
+                color: var(--medium-slate-blue);
+                border-bottom: 2px solid var(--light-sky-blue);
+                padding-bottom: 10px;
+                margin-top: 0;
+            }
+
+            .card {
+                background-color: var(--alice-blue);
+                border-radius: 5px;
+                padding: 25px;
+                margin-bottom: 25px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                border-left: 4px solid var(--light-sky-blue);
+            }
+
+            .card h3 {
+                color: var(--glaucous);
+                margin-top: 0;
+            }
+
+            .btn {
+                display: inline-block;
+                background-color: var(--medium-slate-blue);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 4px;
+                text-decoration: none;
+                transition: background-color 0.3s;
+                font-family: Arial, sans-serif;
+                font-size: 0.9rem;
+                letter-spacing: 0.5px;
+                margin-right: 10px;
+                margin-bottom: 10px;
+            }
+
+            .btn:hover {
+                background-color: var(--glaucous);
+            }
+
+            .btn-bsky {
+                background-color: var(--bsky-blue);
+            }
+
+            .btn-bsky:hover {
+                background-color: #0066cc;
+            }
+
+            footer {
+                text-align: center;
+                padding: 20px;
+                color: var(--glaucous);
+                font-size: 0.9rem;
+                border-top: 1px solid var(--light-sky-blue);
+                flex-shrink: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Serif.blue</h1>
+            <p>Fancy projects by Kieran</p>
+        </header>
+
+        <div class="container">
+            <main>
+                <h2>Some fancy tools</h2>
+                <p>Hiiiii :)</p>
+                <p>
+                    This is a random collection of tools and such that I have
+                    made / collected. It's fairly empty rn but should fill up
+                    quickly enough!
+                </p>
+
+                <div class="card">
+                    <h3>Community Verifications</h3>
+                    <p>
+                        This tool allows you to designate trusted verifiers in
+                        the Bluesky ecosystem. When these trusted accounts
+                        verify other users, you'll see verification badges next
+                        to those profiles while browsing Bluesky.
+                    </p>
+                    <a
+                        href="https://tangled.sh/@dunkirk.sh/serif/raw/main/bluesky-community-verifications.user.js"
+                        class="btn"
+                        >Install with Tampermonkey</a
+                    >
+                    <a
+                        href="https://bsky.app/profile/dunkirk.sh"
+                        class="btn btn-bsky"
+                        >Follow me on Bluesky</a
+                    >
+                </div>
+
+                <div class="card">
+                    <h3>More things soon?</h3>
+                    <p>
+                        Yeah probably lol; I just need to find the right next
+                        project 🤔
+                    </p>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            <p>
+                Made with 💙 by <a href="https://dunkirk.sh">Kieran Klukas</a> |
+                <a href="https://bsky.app/profile/dunkirk.sh">
+                    @dunkirk.sh on Bluesky
+                </a>
+            </p>
+        </footer>
+    </body>
+</html>
