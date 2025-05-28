@@ -314,6 +314,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        vertical-align: 5px;
       `;
 
       // Add a click event to show all verifiers
