@@ -224,10 +224,14 @@
                         simply download the zip and extract it wherever you want
                         it to live. Then <code>crontab -e</code> and add your
                         script (<code
-                            >2 * * * * /home/usrname/pfp/bsky-profile-updates.sh
+                            >2 * * * * /home/usrname/pfp/bsky-pfp-updates.sh
                             >/dev/null 2>&1</code
                         >) to run 2 minutes after the hour (or at really
                         whatever time you want)!
+                    </p>
+                    <p>
+                        btw you need to make the script executable and then run
+                        it once manually to generate the config
                     </p>
                     <a href="/pfp-updates" class="btn"
                         >Customize your gradients!</a
