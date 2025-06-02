@@ -189,6 +189,44 @@
                 </div>
 
                 <div class="card">
+                    <h3>Automatic profile updates!</h3>
+                    <p>
+                        I made this inspired by
+                        <a
+                            href="https://bsky.app/profile/did:plc:gq4fo3u6tqzzdkjlwzpb23tj"
+                            >@dame.is</a
+                        >'s (dame.is's sounds hilarious lol) profile picture
+                        which changes with a sky gradient every hour. I wanted
+                        to do something similar but my profile picture has me in
+                        the foreground so I had to do some masking shenanagins
+                        to get it to work.
+                    </p>
+                    <p>
+                        Anyway if you want to set this up for yourself then grab
+                        a background removed version of your profile from
+                        <a href="https://remove.bg">remove.bg</a> (low res
+                        preview version is fine since this will just be a mask)
+                        and then run
+                        <code
+                            >magick pfp-removebg-preview.png -alpha extract
+                            pfp_matte.png</code
+                        >. Now you can head over to the timeline site linked
+                        below and customize your timeline! When you are done
+                        simply download the zip and extract it wherever you want
+                        it to live. Then <code>crontab -e</code> and add your
+                        script (<code
+                            >2 * * * * /home/usrname/pfp/bsky-profile-updates.sh
+                            >/dev/null 2>&1</code
+                        >
+                        ) to run 2 minutes after the hour (or at really whatever
+                        time you want)!
+                    </p>
+                    <a href="/pfp-updates" class="btn"
+                        >Customize your gradients!</a
+                    >
+                </div>
+
+                <div class="card">
                     <h3>More things soon?</h3>
                     <p>
                         Yeah probably lol; I just need to find the right next
